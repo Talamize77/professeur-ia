@@ -27,23 +27,26 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
         const response = await axios.post(MUNSIT_URL, form, {
             headers: {
                 ...form.getHeaders(),
+                // On change ici pour utiliser la clé sans 'Bearer' si besoin
+                'x-api-key': MUNSIT_API_KEY, 
                 'Authorization': `Bearer ${MUNSIT_API_KEY}`
             }
         });
 
         const transcription = response.data.text || "";
-        console.log(`Reçu de Munsit: ${transcription}`);
+        console.log(`Résultat : ${transcription}`);
 
-        if (transcription.includes(targetPhrase)) {
+        // Vérification simplifiée pour plus de souplesse
+        if (transcription.toLowerCase().includes(targetPhrase.toLowerCase())) {
             res.json({ status: "SUCCESS" });
         } else {
             res.json({ status: "ERROR", received: transcription });
         }
     } catch (error) {
-        console.error("Erreur API Munsit:", error.response ? error.response.data : error.message);
+        console.error("Erreur Munsit détaillée:", error.response ? error.response.data : error.message);
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Serveur actif sur le port ${PORT}`));
+app.listen(PORT, () => console.log(`Serveur prêt sur port ${PORT}`));
