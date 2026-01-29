@@ -14,13 +14,17 @@ const MUNSIT_API_KEY = "sk-ctxt-100fa312645b4bcb9c08e04af2d61601";
 
 app.post('/analyser', upload.single('file'), async (req, res) => {
     try {
-        const targetPhrase = req.body.phrase_id.trim(); 
+        const targetPhrase = req.body.phrase_id ? req.body.phrase_id.trim() : ""; 
         console.log("Cible attendue : " + targetPhrase);
+
+        if (!req.file) {
+            return res.status(400).json({ status: "ERROR", message: "NO_FILE" });
+        }
 
         const form = new FormData();
         form.append('file', req.file.buffer, {
-            filename: req.file.originalname || 'audio.webm',
-            contentType: req.file.mimetype || 'audio/webm',
+            filename: 'audio.webm',
+            contentType: 'audio/webm',
         });
         form.append('model', 'munsit-1');
         form.append('language', 'ar'); 
@@ -39,13 +43,10 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             return res.json({ status: "ERROR", message: "EMPTY_AUDIO" });
         }
 
-        // NETTOYAGE LÉGER : On enlève juste la ponctuation
         const cleanTranscription = transcription.replace(/[.,!?;]/g, "");
 
-        // LOGIQUE SOUPLE MAIS PRÉCISE : 
-        // On vérifie si le mot cible est contenu dans la réponse de l'élève
         if (cleanTranscription.includes(targetPhrase)) {
-            console.log("✅ Match réussi (mot trouvé dans la phrase) !");
+            console.log("✅ Match réussi !");
             res.json({ status: "SUCCESS" });
         } else {
             console.log("❌ Écart détecté. Reçu : " + cleanTranscription);
@@ -56,3 +57,6 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`Serveur opérationnel sur le port ${PORT}`));
