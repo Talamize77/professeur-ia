@@ -18,33 +18,33 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
         const targetPhrase = req.body.phrase_id; 
         
         const form = new FormData();
-        // On utilise 'audio.mp3' comme dans leur exemple pour voir si ça débloque
         form.append('file', req.file.buffer, {
-            filename: 'audio.mp3',
-            contentType: 'audio/mpeg',
+            filename: 'audio.wav',
+            contentType: 'audio/wav',
         });
-        form.append('model', 'munsit-1'); // Modèle exact de ta capture
+        form.append('model', 'munsit-1');
 
         const response = await axios.post(MUNSIT_URL, form, {
             headers: {
                 ...form.getHeaders(),
-                // On met la clé exactement comme ils le demandent
+                // On essaie le format EXACT de leur doc Python/JS
                 'Authorization': `Bearer ${MUNSIT_API_KEY}`
             }
         });
 
+        // Munsit renvoie le texte dans response.data.text
         const transcription = response.data.text || "";
-        console.log(`IA a entendu : ${transcription}`);
+        console.log("Munsit a compris :", transcription);
 
-        // Vérification souple (majuscules/minuscules)
-        if (transcription.toLowerCase().includes(targetPhrase.toLowerCase())) {
+        // Nettoyage pour comparer (on enlève les espaces en trop)
+        if (transcription.trim().toLowerCase().includes(targetPhrase.trim().toLowerCase())) {
             res.json({ status: "SUCCESS" });
         } else {
             res.json({ status: "ERROR", received: transcription });
         }
     } catch (error) {
-        // On affiche l'erreur exacte renvoyée par Munsit dans tes logs Railway
-        console.error("Détail Erreur Munsit:", error.response ? error.response.data : error.message);
+        // On affiche l'erreur complète pour comprendre pourquoi Munsit bloque
+        console.error("Erreur Munsit :", error.response ? error.response.data : error.message);
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
