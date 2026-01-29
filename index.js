@@ -10,7 +10,7 @@ const upload = multer();
 app.use(cors());
 app.use(express.json());
 
-const MUNSIT_API_KEY = process.env.MUNSIT_API_KEY; 
+const MUNSIT_API_KEY = "sk-ctxt-3c38eda7a2e54cf2802a7b002e9a7602"; 
 const MUNSIT_URL = "https://api.cntxt.tools/audio/transcribe"; 
 
 app.post('/analyser', upload.single('file'), async (req, res) => {
