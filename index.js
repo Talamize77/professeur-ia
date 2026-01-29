@@ -18,32 +18,33 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
         const targetPhrase = req.body.phrase_id; 
         
         const form = new FormData();
+        // On utilise 'audio.mp3' comme dans leur exemple pour voir si ça débloque
         form.append('file', req.file.buffer, {
-            filename: 'audio.wav',
-            contentType: 'audio/wav',
+            filename: 'audio.mp3',
+            contentType: 'audio/mpeg',
         });
-        form.append('model', 'munsit-1');
+        form.append('model', 'munsit-1'); // Modèle exact de ta capture
 
         const response = await axios.post(MUNSIT_URL, form, {
             headers: {
                 ...form.getHeaders(),
-                // On change ici pour utiliser la clé sans 'Bearer' si besoin
-                'x-api-key': MUNSIT_API_KEY, 
+                // On met la clé exactement comme ils le demandent
                 'Authorization': `Bearer ${MUNSIT_API_KEY}`
             }
         });
 
         const transcription = response.data.text || "";
-        console.log(`Résultat : ${transcription}`);
+        console.log(`IA a entendu : ${transcription}`);
 
-        // Vérification simplifiée pour plus de souplesse
+        // Vérification souple (majuscules/minuscules)
         if (transcription.toLowerCase().includes(targetPhrase.toLowerCase())) {
             res.json({ status: "SUCCESS" });
         } else {
             res.json({ status: "ERROR", received: transcription });
         }
     } catch (error) {
-        console.error("Erreur Munsit détaillée:", error.response ? error.response.data : error.message);
+        // On affiche l'erreur exacte renvoyée par Munsit dans tes logs Railway
+        console.error("Détail Erreur Munsit:", error.response ? error.response.data : error.message);
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
