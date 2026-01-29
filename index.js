@@ -10,9 +10,8 @@ const upload = multer();
 app.use(cors());
 app.use(express.json());
 
-// Ta clé est déjà intégrée ici comme sur ta capture GitHub
+// Clé directement dans le code pour éviter toute erreur de variable Railway
 const MUNSIT_API_KEY = "sk-ctxt-3c38eda7a2e54cf2802a7b002e9a7602"; 
-const MUNSIT_URL = "https://api.cntxt.tools/audio/transcribe"; 
 
 app.post('/analyser', upload.single('file'), async (req, res) => {
     try {
@@ -24,17 +23,16 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
         });
         form.append('model', 'munsit-1');
 
-        const response = await axios.post(MUNSIT_URL, form, {
+        const response = await axios.post("https://api.cntxt.tools/audio/transcribe", form, {
             headers: {
                 ...form.getHeaders(),
-                // On envoie la clé de deux façons pour être sûr
-                'x-api-key': MUNSIT_API_KEY,
+                // On utilise uniquement Authorization comme dans leur doc officielle
                 'Authorization': `Bearer ${MUNSIT_API_KEY}`
             }
         });
 
         const transcription = response.data.text || "";
-        console.log("Texte reçu : " + transcription);
+        console.log("Transcription réussie : " + transcription);
 
         if (transcription.toLowerCase().includes(targetPhrase.toLowerCase())) {
             res.json({ status: "SUCCESS" });
@@ -42,11 +40,10 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             res.json({ status: "ERROR", received: transcription });
         }
     } catch (error) {
-        // Cela nous affichera l'erreur exacte dans Railway
-        console.error("Erreur Munsit :", error.response ? error.response.data : error.message);
-        res.status(500).json({ status: "SERVER_ERROR" });
+        // Affiche l'erreur exacte pour qu'on sache si c'est la clé ou autre chose
+        console.error("Erreur API Munsit :", error.response ? JSON.stringify(error.response.data) : error.message);
+        res.status(error.response ? error.response.status : 500).json({ status: "SERVER_ERROR" });
     }
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log("Serveur actif sur port 8080"));
+app.listen(8080, () => console.log("Serveur actif sur port 8080"));
