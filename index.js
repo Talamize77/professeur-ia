@@ -14,7 +14,7 @@ const MUNSIT_API_KEY = "sk-ctxt-100fa312645b4bcb9c08e04af2d61601";
 
 app.post('/analyser', upload.single('file'), async (req, res) => {
     try {
-        const targetPhrase = req.body.phrase_id; 
+        const targetPhrase = req.body.phrase_id.trim(); 
         console.log("Cible attendue : " + targetPhrase);
 
         const form = new FormData();
@@ -32,7 +32,6 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             }
         });
 
-        // On récupère le texte brut sans trop le transformer
         const transcription = (response.data.text || (response.data.data && response.data.data.transcription) || "").trim();
         console.log("Munsit a entendu (BRUT) : [" + transcription + "]");
 
@@ -40,12 +39,13 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             return res.json({ status: "ERROR", message: "EMPTY_AUDIO" });
         }
 
-        // COMPARAISON PLUS PRÉCISE : On enlève le ".includes" pour une égalité plus directe
-        // On garde un nettoyage minimal (espaces en trop) pour ne pas être injuste
-        const cleanTranscription = transcription.replace(/[.,!?;]/g, ""); // On enlève juste la ponctuation
+        // NETTOYAGE LÉGER : On enlève juste la ponctuation
+        const cleanTranscription = transcription.replace(/[.,!?;]/g, "");
 
-        if (cleanTranscription === targetPhrase) {
-            console.log("✅ Match parfait !");
+        // LOGIQUE SOUPLE MAIS PRÉCISE : 
+        // On vérifie si le mot cible est contenu dans la réponse de l'élève
+        if (cleanTranscription.includes(targetPhrase)) {
+            console.log("✅ Match réussi (mot trouvé dans la phrase) !");
             res.json({ status: "SUCCESS" });
         } else {
             console.log("❌ Écart détecté. Reçu : " + cleanTranscription);
@@ -56,6 +56,3 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
-
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Serveur en mode PRECISION sur le port ${PORT}`));
