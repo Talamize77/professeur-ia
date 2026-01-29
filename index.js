@@ -10,40 +10,46 @@ const upload = multer();
 app.use(cors());
 app.use(express.json());
 
-// Clé directement dans le code pour éviter toute erreur de variable Railway
+// TA NOUVELLE CLÉ ICI
 const MUNSIT_API_KEY = "sk-ctxt-100fa312645b4bcb9c08e04af2d61601"; 
 
 app.post('/analyser', upload.single('file'), async (req, res) => {
     try {
         const targetPhrase = req.body.phrase_id; 
+        console.log("Analyse demandée pour : " + targetPhrase);
+
         const form = new FormData();
         form.append('file', req.file.buffer, {
             filename: 'audio.wav',
             contentType: 'audio/wav',
         });
         form.append('model', 'munsit-1');
+        form.append('language', 'ar'); // ON FORCE L'ARABE
 
         const response = await axios.post("https://api.cntxt.tools/audio/transcribe", form, {
             headers: {
                 ...form.getHeaders(),
-                // On utilise uniquement Authorization comme dans leur doc officielle
                 'Authorization': `Bearer ${MUNSIT_API_KEY}`
             }
         });
 
         const transcription = response.data.text || "";
-        console.log("Transcription réussie : " + transcription);
+        console.log("Texte capté par Munsit : [" + transcription + "]");
 
-        if (transcription.toLowerCase().includes(targetPhrase.toLowerCase())) {
+        // On nettoie le texte pour éviter les erreurs d'espaces
+        const cleanTranscription = transcription.trim();
+
+        if (cleanTranscription.includes(targetPhrase)) {
+            console.log("✅ MATCH !");
             res.json({ status: "SUCCESS" });
         } else {
-            res.json({ status: "ERROR", received: transcription });
+            console.log("❌ NO MATCH. Reçu : " + cleanTranscription);
+            res.json({ status: "ERROR", received: cleanTranscription });
         }
     } catch (error) {
-        // Affiche l'erreur exacte pour qu'on sache si c'est la clé ou autre chose
-        console.error("Erreur API Munsit :", error.response ? JSON.stringify(error.response.data) : error.message);
-        res.status(error.response ? error.response.status : 500).json({ status: "SERVER_ERROR" });
+        console.error("Détails de l'erreur :", error.response ? JSON.stringify(error.response.data) : error.message);
+        res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
 
-app.listen(8080, () => console.log("Serveur actif sur port 8080"));
+app.listen(8080, () => console.log("Serveur Professeur IA prêt sur port 8080"));
