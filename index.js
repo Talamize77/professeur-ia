@@ -11,7 +11,8 @@ app.use(cors());
 app.use(express.json());
 
 const MUNSIT_API_KEY = process.env.MUNSIT_API_KEY; 
-const MUNSIT_URL = "https://api.cntxt.tools/v1/stt"; 
+// URL mise à jour selon ta capture d'écran de la doc
+const MUNSIT_URL = "https://api.cntxt.tools/audio/transcribe"; 
 
 app.post('/analyser', upload.single('file'), async (req, res) => {
     try {
@@ -22,7 +23,7 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             filename: 'audio.wav',
             contentType: 'audio/wav',
         });
-        form.append('model', 'arabic-general');
+        form.append('model', 'munsit-1'); // Modèle indiqué sur ta capture
 
         const response = await axios.post(MUNSIT_URL, form, {
             headers: {
@@ -31,20 +32,21 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             }
         });
 
-        const transcription = response.data.text ? response.data.text.trim() : "";
-        console.log(`Entendu: ${transcription} | Attendu: ${targetPhrase}`);
+        // Munsit renvoie souvent la réponse dans response.data.text
+        const transcription = response.data.text || "";
+        console.log(`Reçu de Munsit: ${transcription}`);
 
-        // Comparaison simple pour commencer
-        if (transcription.includes(targetPhrase) || targetPhrase.includes(transcription)) {
-            res.json({ status: "SUCCESS", text: transcription });
+        if (transcription.toLowerCase().includes(targetPhrase.toLowerCase())) {
+            res.json({ status: "SUCCESS" });
         } else {
-            res.json({ status: "ERROR", text: transcription });
+            res.json({ status: "ERROR", received: transcription });
         }
     } catch (error) {
-        console.error("Erreur API Munsit:", error.response ? error.response.data : error.message);
+        // C'est ici que le "CORS Forbidden" apparaissait
+        console.error("Erreur détaillée:", error.response ? error.response.data : error.message);
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Serveur actif sur le port ${PORT}`));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`Serveur prêt sur le port ${PORT}`));
