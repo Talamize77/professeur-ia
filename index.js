@@ -15,15 +15,9 @@ const MUNSIT_API_KEY = "sk-ctxt-100fa312645b4bcb9c08e04af2d61601";
 app.post('/analyser', upload.single('file'), async (req, res) => {
     try {
         const targetPhrase = req.body.phrase_id; 
-        console.log("Cible : " + targetPhrase);
-
-        if (!req.file) {
-            console.log("❌ Aucun fichier reçu du client.");
-            return res.status(400).json({ status: "ERROR", message: "NO_FILE" });
-        }
+        console.log("Cible attendue : " + targetPhrase);
 
         const form = new FormData();
-        // MODIFICATION ICI : On utilise les infos réelles du fichier envoyé par Système.io
         form.append('file', req.file.buffer, {
             filename: req.file.originalname || 'audio.webm',
             contentType: req.file.mimetype || 'audio/webm',
@@ -38,29 +32,30 @@ app.post('/analyser', upload.single('file'), async (req, res) => {
             }
         });
 
-        // Munsit renvoie souvent le texte dans response.data.data.transcription ou response.data.text
-        // On adapte pour être sûr de capter la réponse
-        const transcription = (response.data.text || (response.data.data && response.data.data.transcription) || "").trim().toLowerCase();
-        console.log("Munsit a entendu : [" + transcription + "]");
+        // On récupère le texte brut sans trop le transformer
+        const transcription = (response.data.text || (response.data.data && response.data.data.transcription) || "").trim();
+        console.log("Munsit a entendu (BRUT) : [" + transcription + "]");
 
         if (!transcription) {
-            console.log("⚠️ Munsit n'a capté aucun son (Réponse vide).");
             return res.json({ status: "ERROR", message: "EMPTY_AUDIO" });
         }
 
-        if (transcription.includes(targetPhrase.toLowerCase())) {
-            console.log("✅ Match réussi !");
+        // COMPARAISON PLUS PRÉCISE : On enlève le ".includes" pour une égalité plus directe
+        // On garde un nettoyage minimal (espaces en trop) pour ne pas être injuste
+        const cleanTranscription = transcription.replace(/[.,!?;]/g, ""); // On enlève juste la ponctuation
+
+        if (cleanTranscription === targetPhrase) {
+            console.log("✅ Match parfait !");
             res.json({ status: "SUCCESS" });
         } else {
-            console.log("❌ Pas de correspondance.");
-            res.json({ status: "ERROR", received: transcription });
+            console.log("❌ Écart détecté. Reçu : " + cleanTranscription);
+            res.json({ status: "ERROR", received: cleanTranscription });
         }
     } catch (error) {
-        console.error("Erreur API Munsit :", error.response ? JSON.stringify(error.response.data) : error.message);
+        console.error("Erreur API :", error.response ? JSON.stringify(error.response.data) : error.message);
         res.status(500).json({ status: "SERVER_ERROR" });
     }
 });
 
-// Utilisation du port dynamique pour Render ou 8080 par défaut
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Serveur prêt sur le port ${PORT}`));
+app.listen(PORT, () => console.log(`Serveur en mode PRECISION sur le port ${PORT}`));
